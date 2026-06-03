@@ -85,6 +85,9 @@ $script:__COREUTILS_ARG_EVAL__ = [System.Text.RegularExpressions.MatchEvaluator]
     return $ExecutionContext.InvokeCommand.ExpandString($m.Groups[4].Value)
 }
 
+# 0: not tested, 1: coreutils not installed, 2: coreutils installed.
+$script:__COREUTILS_CMD_DIR_TEST__ = 0
+
 # PSConsoleHostReadLine override that rewrites coreutils command names to their
 # .cmd equivalents after PSReadLine returns (history keeps the original).
 #
@@ -104,6 +107,18 @@ function PSConsoleHostReadLine {
 
     # If the line contains no coreutils name, we don't need to parse the AST at all.
     if (-not $script:__COREUTILS_FAST_SKIP__.IsMatch($line)) {
+        return $line
+    }
+
+    # Roamed/synced profiles can load this snippet on machines where coreutils is not installed.
+    # Test for the existence of the command directory once and remember the result.
+    if ($script:__COREUTILS_CMD_DIR_TEST__ -eq 0) {
+        $script:__COREUTILS_CMD_DIR_TEST__ = 1
+        if (Test-Path -LiteralPath '!!CMDDIR!!' -PathType Container -ErrorAction Ignore) {
+            $script:__COREUTILS_CMD_DIR_TEST__ = 2
+        }
+    }
+    if ($script:__COREUTILS_CMD_DIR_TEST__ -ne 2) {
         return $line
     }
 
@@ -135,7 +150,7 @@ function PSConsoleHostReadLine {
         $cmdElement = $cmd.CommandElements[0]
         $start = $cmdElement.Extent.StartOffset
         $end = $cmdElement.Extent.EndOffset
-        $replacement = "!!CMDPFX!!"
+        $replacement = "& '!!CMDDIR!!"
 
         switch ($baseName) {
             'la' { $replacement += "ls.cmd' --color=auto -AFhl" }
