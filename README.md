@@ -90,6 +90,18 @@ Legend: ✅ ships and works · ⚠️ ships but conflicts with a built-in · �
 | **File permissions**  | Windows uses ACLs, not POSIX permission bits. Permission-based predicates (for example `find -perm`) may behave differently or be unavailable. |
 | **Symbolic links**    | Reading existing symbolic links works without elevation. Creating new symbolic links requires Developer Mode ([**Settings > System > Advanced**](https://learn.microsoft.com/windows/advanced-settings)) or an elevated terminal. |
 
+### PowerShell Command Parsing
+
+The installer integrates itself with interactive PowerShell sessions via `PSReadLine`.
+It ensures that quoted expression behave somewhat like they do under UNIX shells or CMD:
+`echo *.txt` will then print a number of file names, while `echo '*.txt'` will print "*.txt" literally.
+
+There are two shortcomings, however:
+* PowerShell's escape character is still <code>\`</code>, not <code>\\</code><br>
+  While you may write `find . \( -foo -bar \)` with Bash, you still need to write ``find . `( -foo -bar `)`` in PowerShell.
+* `Get-Command ls`, `Get-Help ls`, etc., will still show `ls`, etc., as builtin commands<br>
+  Due to limitations around `PSNativeCommandPreserveBytePipe` we cannot integrate ourselves in a more robust way with PowerShell.
+
 ### Intentionally dropped
 
 Commands that exist upstream but aren't shipped here because they rely on POSIX-only concepts, would break existing Windows scripts, or simply aren't useful on Windows.
